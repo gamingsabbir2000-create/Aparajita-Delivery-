@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const AparajitaApp());
 }
 
-// ---------------- MAIN APP ----------------
 class AparajitaApp extends StatelessWidget {
   const AparajitaApp({super.key});
 
@@ -14,7 +15,8 @@ class AparajitaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'আমরা অপরাজিতা',
       theme: ThemeData(
-        primaryColor: const Color(0xFF6B003B),
+        scaffoldBackgroundColor: const Color(0xFFFDEEF4),
+        primaryColor: const Color(0xFF800040),
         useMaterial3: true,
       ),
       home: const SignUpScreen(),
@@ -25,72 +27,64 @@ class AparajitaApp extends StatelessWidget {
 // Global Schedule Model
 class ScheduleModel {
   String id;
+  String type;
   String entrepreneurName;
-  String address;
-  String phone;
+  String entrepreneurAddress;
+  String entrepreneurPhone;
   String customerName;
+  String customerPhone;
+  String customerAddress;
   String bill;
   String pickupTime;
   String deliveryTime;
+  String deliveryDate;
   String note;
-  String assignedRider;
-  String status;
 
   ScheduleModel({
     required this.id,
+    this.type = 'সাধারণ শিডিউল',
     required this.entrepreneurName,
-    required this.address,
-    required this.phone,
+    required this.entrepreneurAddress,
+    required this.entrepreneurPhone,
     required this.customerName,
+    required this.customerPhone,
+    required this.customerAddress,
     required this.bill,
     required this.pickupTime,
     required this.deliveryTime,
+    required this.deliveryDate,
     this.note = '',
-    this.assignedRider = 'Unassigned',
-    this.status = 'Active',
   });
 }
 
 List<ScheduleModel> globalSchedules = [];
 
-// Custom Branding Background & Logo Widget
-Widget buildBrandingHeader() {
-  return Column(
+// Watermark Wrapper Component
+Widget buildWatermarkWrapper({required Widget child}) {
+  return Stack(
     children: [
-      Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.15),
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: const Icon(
-          Icons.woman_rounded, // Visual representation of Aparajita Icon
-          size: 65,
-          color: Colors.white,
-        ),
-      ),
-      const SizedBox(height: 10),
-      const Text(
-        'আমরা অপরাজিতা',
-        style: TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 1.2,
+      Center(
+        child: Opacity(
+          opacity: 0.07,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.woman_rounded, size: 180, color: Color(0xFF800040)),
+              SizedBox(height: 10),
+              Text(
+                'আমরা অপরাজিতা',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF800040),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+      child,
     ],
-  );
-}
-
-BoxDecoration brandingBackground() {
-  return const BoxDecoration(
-    gradient: LinearGradient(
-      colors: [Color(0xFF3B0020), Color(0xFF6B003B), Color(0xFF8B004B)],
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    ),
   );
 }
 
@@ -103,104 +97,108 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  String selectedRole = 'উদ্যোক্তা';
+  final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passController = TextEditingController();
-  final _nameController = TextEditingController();
+
+  Future<void> _handleSignUp() async {
+    String name = _nameController.text.trim();
+    String phone = _phoneController.text.trim();
+    String pass = _passController.text.trim();
+
+    if (name.isEmpty) {
+      _showMsg('অনুগ্রহ করে আপনার নাম লিখুন।');
+      return;
+    }
+    if (phone.length < 11) {
+      _showMsg('সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন।');
+      return;
+    }
+    if (pass.length < 6) {
+      _showMsg('পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।');
+      return;
+    }
+
+    // Save info locally
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_phone', phone);
+    await prefs.setString('saved_pass', pass);
+    await prefs.setString('saved_name', name);
+
+    _showMsg('সাইন আপ সফল হয়েছে!');
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
+  void _showMsg(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: brandingBackground(),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 10,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    buildBrandingHeader(),
-                    const SizedBox(height: 20),
-                    const Text('অ্যাকাউন্ট সাইন আপ করুন',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6B003B))),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      decoration: InputDecoration(
-                        labelText: 'রোল সিলেক্ট করুন',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: ['উদ্যোক্তা', 'রাইডার']
-                          .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedRole = v!),
+      appBar: AppBar(
+        title: const Text('সাইন আপ - আমরা অপরাজিতা'),
+        backgroundColor: const Color(0xFF800040),
+        foregroundColor: Colors.white,
+      ),
+      body: buildWatermarkWrapper(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const Icon(Icons.woman_rounded, size: 80, color: Color(0xFF800040)),
+                  const Text('আমরা অপরাজিতা', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                  const SizedBox(height: 20),
+                  _buildInput('নাম (Name)', _nameController),
+                  _buildInput('মোবাইল নম্বর (১১ ডিজিট)', _phoneController, isPhone: true),
+                  _buildInput('পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)', _passController, isPass: true),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF800040)),
+                      onPressed: _handleSignUp,
+                      child: const Text('সাইন আপ করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'নাম (Name)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'মোবাইল নম্বর',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _passController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'পাসওয়ার্ড',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6B003B),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('সাইন আপ সফল হয়েছে! এখন লগইন করুন।')),
-                          );
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginScreen()),
-                          );
-                        },
-                        child: const Text('সাইন আপ করুন', style: TextStyle(fontSize: 16, color: Colors.white)),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
-                        );
-                      },
-                      child: const Text('ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন'),
-                    )
-                  ],
-                ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    child: const Text('ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন', style: TextStyle(color: Color(0xFF800040))),
+                  )
+                ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInput(String label, TextEditingController controller, {bool isPhone = false, bool isPass = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        obscureText: isPass,
+        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          fillColor: Colors.white.withOpacity(0.8),
+          filled: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
     );
@@ -216,75 +214,86 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  String selectedRole = 'উদ্যোক্তা';
+  final _phoneController = TextEditingController();
+  final _passController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? phone = prefs.getString('saved_phone');
+    String? pass = prefs.getString('saved_pass');
+
+    if (phone != null && pass != null) {
+      setState(() {
+        _phoneController.text = phone;
+        _passController.text = pass;
+      });
+    }
+  }
+
+  Future<void> _handleLogin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedPhone = prefs.getString('saved_phone');
+    String? savedPass = prefs.getString('saved_pass');
+
+    String enteredPhone = _phoneController.text.trim();
+    String enteredPass = _passController.text.trim();
+
+    if (savedPhone == null || savedPass == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('কোনো অ্যাকাউন্ট পাওয়া যায়নি। প্রথমে সাইন আপ করুন।')),
+      );
+      return;
+    }
+
+    if (enteredPhone == savedPhone && enteredPass == savedPass) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('মোবাইল নম্বর বা পাসওয়ার্ড ভুল হয়েছে!')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: brandingBackground(),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              elevation: 10,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    buildBrandingHeader(),
-                    const SizedBox(height: 20),
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      decoration: InputDecoration(
-                        labelText: 'লগইন রোল',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: ['উদ্যোক্তা', 'রাইডার']
-                          .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedRole = v!),
+      appBar: AppBar(
+        title: const Text('লগইন - আমরা অপরাজিতা'),
+        backgroundColor: const Color(0xFF800040),
+        foregroundColor: Colors.white,
+      ),
+      body: buildWatermarkWrapper(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const Icon(Icons.woman_rounded, size: 80, color: Color(0xFF800040)),
+                  const Text('আমরা অপরাজিতা', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                  const SizedBox(height: 20),
+                  _buildInput('মোবাইল নম্বর', _phoneController, isPhone: true),
+                  _buildInput('পাসওয়ার্ড', _passController, isPass: true),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF800040)),
+                      onPressed: _handleLogin,
+                      child: const Text('লগইন করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'মোবাইল নম্বর',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'পাসওয়ার্ড',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6B003B),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DashboardScreen(userRole: selectedRole),
-                            ),
-                          );
-                        },
-                        child: const Text('লগইন করুন', style: TextStyle(fontSize: 16, color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -292,198 +301,18 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
 
-// ---------------- DASHBOARD SCREEN ----------------
-class DashboardScreen extends StatelessWidget {
-  final String userRole;
-  const DashboardScreen({super.key, required this.userRole});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('আমরা অপরাজিতা ($userRole)'),
-        backgroundColor: const Color(0xFF6B003B),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          children: [
-            if (userRole == 'উদ্যোক্তা')
-              _buildFolderCard(
-                context,
-                title: 'শিডিউল সাবমিট করুন',
-                icon: Icons.note_add_rounded,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ScheduleSubmitScreen()),
-                  );
-                },
-              ),
-            _buildFolderCard(
-              context,
-              title: 'সকল শিডিউল ফোল্ডার (${globalSchedules.length})',
-              icon: Icons.folder_special_rounded,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AllSchedulesScreen(userRole: userRole)),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFolderCard(BuildContext context, {required String title, required IconData icon, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF6B003B).withOpacity(0.08),
-          border: Border.all(color: const Color(0xFF6B003B), width: 1.5),
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 50, color: const Color(0xFF6B003B)),
-            const SizedBox(height: 10),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6B003B))),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------- SCHEDULE FORM SCREEN ----------------
-class ScheduleSubmitScreen extends StatefulWidget {
-  final ScheduleModel? scheduleToEdit;
-  const ScheduleSubmitScreen({super.key, this.scheduleToEdit});
-
-  @override
-  State<ScheduleSubmitScreen> createState() => _ScheduleSubmitScreenState();
-}
-
-class _ScheduleSubmitScreenState extends State<ScheduleSubmitScreen> {
-  final _nameController = TextEditingController(text: 'Nishat');
-  final _addressController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _customerController = TextEditingController();
-  final _billController = TextEditingController();
-  final _pickupController = TextEditingController();
-  final _deliveryController = TextEditingController();
-  final _noteController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.scheduleToEdit != null) {
-      _nameController.text = widget.scheduleToEdit!.entrepreneurName;
-      _addressController.text = widget.scheduleToEdit!.address;
-      _phoneController.text = widget.scheduleToEdit!.phone;
-      _customerController.text = widget.scheduleToEdit!.customerName;
-      _billController.text = widget.scheduleToEdit!.bill;
-      _pickupController.text = widget.scheduleToEdit!.pickupTime;
-      _deliveryController.text = widget.scheduleToEdit!.deliveryTime;
-      _noteController.text = widget.scheduleToEdit!.note;
-    }
-  }
-
-  void _saveSchedule() {
-    if (widget.scheduleToEdit != null) {
-      widget.scheduleToEdit!.entrepreneurName = _nameController.text;
-      widget.scheduleToEdit!.address = _addressController.text;
-      widget.scheduleToEdit!.phone = _phoneController.text;
-      widget.scheduleToEdit!.customerName = _customerController.text;
-      widget.scheduleToEdit!.bill = _billController.text;
-      widget.scheduleToEdit!.pickupTime = _pickupController.text;
-      widget.scheduleToEdit!.deliveryTime = _deliveryController.text;
-      widget.scheduleToEdit!.note = _noteController.text;
-    } else {
-      globalSchedules.add(
-        ScheduleModel(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          entrepreneurName: _nameController.text,
-          address: _addressController.text,
-          phone: _phoneController.text,
-          customerName: _customerController.text,
-          bill: _billController.text,
-          pickupTime: _pickupController.text,
-          deliveryTime: _deliveryController.text,
-          note: _noteController.text,
-        ),
-      );
-    }
-    Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.scheduleToEdit != null ? 'শিডিউল এডিট' : 'নতুন শিডিউল'),
-        backgroundColor: const Color(0xFF6B003B),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildField('উদ্যোক্তা নাম', _nameController),
-            _buildField('ঠিকানা', _addressController),
-            _buildField('ফোন নং', _phoneController, isPhone: true),
-            _buildField('কাস্টমার', _customerController),
-            _buildField('Bill', _billController),
-            _buildField('Pickup time', _pickupController),
-            _buildField('Delivery time', _deliveryController),
-            _buildField('Note', _noteController, maxLines: 3),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6B003B)),
-                onPressed: _saveSchedule,
-                child: const Text('সাবমিট করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildField(String label, TextEditingController controller, {int maxLines = 1, bool isPhone = false}) {
+  Widget _buildInput(String label, TextEditingController controller, {bool isPhone = false, bool isPass = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextField(
         controller: controller,
-        maxLines: maxLines,
+        obscureText: isPass,
         keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
+          fillColor: Colors.white.withOpacity(0.8),
+          filled: true,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
@@ -491,70 +320,246 @@ class _ScheduleSubmitScreenState extends State<ScheduleSubmitScreen> {
   }
 }
 
-// ---------------- ALL SCHEDULES SCREEN ----------------
-class AllSchedulesScreen extends StatefulWidget {
-  final String userRole;
-  const AllSchedulesScreen({super.key, required this.userRole});
+// ---------------- DASHBOARD SCREEN ----------------
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
 
   @override
-  State<AllSchedulesScreen> createState() => _AllSchedulesScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _AllSchedulesScreenState extends State<AllSchedulesScreen> {
+class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('শিডিউল ফোল্ডার'),
-        backgroundColor: const Color(0xFF6B003B),
+        title: const Text('ড্যাশবোর্ড - আমরা অপরাজিতা'),
+        backgroundColor: const Color(0xFF800040),
         foregroundColor: Colors.white,
       ),
-      body: globalSchedules.isEmpty
-          ? const Center(child: Text('কোনো শিডিউল পাওয়া যায়নি।'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: globalSchedules.length,
-              itemBuilder: (context, index) {
-                final item = globalSchedules[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('উদ্যোক্তা নাম - ${item.entrepreneurName}'),
-                        Text('ঠিকানা - ${item.address}'),
-                        Text('ফোন নং - ${item.phone}'),
-                        const SizedBox(height: 6),
-                        Text('কাস্টমার: ${item.customerName}'),
-                        Text('Bill: ${item.bill}'),
-                        Text('Pickup time: ${item.pickupTime}'),
-                        Text('Delivery time: ${item.deliveryTime}'),
-                        Text('Note: ${item.note}'),
-                        const Divider(),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('রাইডার: ${item.assignedRider}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            if (widget.userRole == 'উদ্যোক্তা')
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => ScheduleSubmitScreen(scheduleToEdit: item)),
-                                  ).then((_) => setState(() {}));
-                                },
-                              )
-                          ],
-                        )
-                      ],
-                    ),
+      body: buildWatermarkWrapper(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('মোট শিডিউল:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                    Text('${globalSchedules.length}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF800040),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                );
-              },
-            ),
+                  icon: const Icon(Icons.folder, color: Colors.white),
+                  label: const Text('রাইডার ফোল্ডার (সকল রাইডার ও শিডিউল দেখুন)', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  onPressed: () {},
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 45),
+                  side: const BorderSide(color: Color(0xFF800040)),
+                  backgroundColor: Colors.white.withOpacity(0.5),
+                ),
+                icon: const Icon(Icons.calendar_today, size: 18, color: Color(0xFF800040)),
+                label: const Text('তারিখ: 30 August, 2026 (পরিবর্তন করুন)', style: TextStyle(color: Color(0xFF800040))),
+                onPressed: () {},
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF800040),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  child: const Text('+  শিডিউল দিন', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AddScheduleScreen()),
+                    ).then((_) => setState(() {}));
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('জমা দেওয়া শিডিউলসমূহ:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A002A))),
+              const SizedBox(height: 10),
+              Expanded(
+                child: globalSchedules.isEmpty
+                    ? const Center(child: Text('কোনো শিডিউল জমা দেওয়া হয়নি।', style: TextStyle(color: Colors.grey)))
+                    : ListView.builder(
+                        itemCount: globalSchedules.length,
+                        itemBuilder: (context, index) {
+                          final item = globalSchedules[index];
+                          return Card(
+                            color: Colors.white.withOpacity(0.9),
+                            margin: const EdgeInsets.only(bottom: 10),
+                            child: ListTile(
+                              title: Text('${item.customerName} (${item.bill})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('উদ্যোক্তা: ${item.entrepreneurName}\nপিকআপ: ${item.pickupTime} | ডেলিভারি: ${item.deliveryTime}'),
+                            ),
+                          );
+                        },
+                      ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- ADD SCHEDULE SCREEN ----------------
+class AddScheduleScreen extends StatefulWidget {
+  const AddScheduleScreen({super.key});
+
+  @override
+  State<AddScheduleScreen> createState() => _AddScheduleScreenState();
+}
+
+class _AddScheduleScreenState extends State<AddScheduleScreen> {
+  String scheduleType = 'সাধারণ শিডিউল';
+
+  final _entNameController = TextEditingController(text: 'Nishat');
+  final _entAddressController = TextEditingController();
+  final _entPhoneController = TextEditingController();
+
+  final _custNameController = TextEditingController();
+  final _custPhoneController = TextEditingController();
+  final _custAddressController = TextEditingController();
+
+  final _billController = TextEditingController();
+  final _pickupController = TextEditingController();
+  final _deliveryController = TextEditingController();
+  final _dateController = TextEditingController(text: '30 August, 2026');
+  final _noteController = TextEditingController();
+
+  void _saveSchedule() {
+    globalSchedules.add(
+      ScheduleModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: scheduleType,
+        entrepreneurName: _entNameController.text,
+        entrepreneurAddress: _entAddressController.text,
+        entrepreneurPhone: _entPhoneController.text,
+        customerName: _custNameController.text,
+        customerPhone: _custPhoneController.text,
+        customerAddress: _custAddressController.text,
+        bill: _billController.text,
+        pickupTime: _pickupController.text,
+        deliveryTime: _deliveryController.text,
+        deliveryDate: _dateController.text,
+        note: _noteController.text,
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('নতুন শিডিউল তৈরি করুন'),
+        backgroundColor: const Color(0xFF800040),
+        foregroundColor: Colors.white,
+      ),
+      body: buildWatermarkWrapper(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('শিডিউলের ধরন:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                  const SizedBox(width: 10),
+                  ChoiceChip(
+                    label: const Text('সাধারণ শিডিউল'),
+                    selected: scheduleType == 'সাধারণ শিডিউল',
+                    selectedColor: const Color(0xFFF0D0E0),
+                    onSelected: (val) => setState(() => scheduleType = 'সাধারণ শিডিউল'),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('অফার শিডিউল'),
+                    selected: scheduleType == 'অফার শিডিউল',
+                    selectedColor: const Color(0xFFF0D0E0),
+                    onSelected: (val) => setState(() => scheduleType = 'অফার শিডিউল'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              const Text('উদ্যোক্তার তথ্য', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+              _buildField('উদ্যোক্তার নাম', _entNameController),
+              _buildField('উদ্যোক্তার ঠিকানা', _entAddressController),
+              _buildField('উদ্যোক্তার ফোন নম্বর', _entPhoneController, icon: Icons.phone),
+              const SizedBox(height: 15),
+              const Text('কাস্টমার তথ্য', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+              _buildField('কাস্টমার নাম', _custNameController),
+              _buildField('কাস্টমার ফোন নম্বর', _custPhoneController, icon: Icons.phone),
+              _buildField('কাস্টমার ঠিকানা', _custAddressController),
+              _buildField('বিল + ডেলিভারি চার্জ', _billController),
+              _buildField('পিকআপ সময়', _pickupController),
+              _buildField('ডেলিভারি সময়', _deliveryController),
+              _buildField('ডেলিভারি তারিখ', _dateController),
+              _buildField('নোট', _noteController, maxLines: 2),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF800040),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  onPressed: _saveSchedule,
+                  child: const Text('সংরক্ষণ করুন', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField(String hint, TextEditingController controller, {IconData? icon, int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: icon != null ? Icon(icon, color: const Color(0xFF800040), size: 20) : null,
+          fillColor: Colors.white.withOpacity(0.7),
+          filled: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
     );
   }
 }
