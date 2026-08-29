@@ -1,14 +1,15 @@
-name: Build Flutter APK
+ions/checkout@v4
 
-on:
-  push:
-    branches: ["main"]
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.19.x"
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+ ions/checkout@v4ions/checkout@v4ions/checkout@v4ions/checkout@v4ions/checkout@v4ions/checkout@v4ions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -21,8 +22,21 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      n:Upload APK
+
+       uses: ions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          flutter-version: "3.19.x"
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      n:Upload APK
+
+       uses: 
