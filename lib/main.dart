@@ -1,37 +1,34 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AparajitaDeliveryApp());
+void main() {
+  runApp(const AparajitaApp());
 }
 
 // ---------------- MAIN APP ----------------
-class AparajitaDeliveryApp extends StatelessWidget {
-  const AparajitaDeliveryApp({super.key});
+class AparajitaApp extends StatelessWidget {
+  const AparajitaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Aparajita Delivery',
+      title: 'আমরা অপরাজিতা',
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
+        primaryColor: const Color(0xFF6B003B),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: const SignUpScreen(),
     );
   }
 }
 
-// Global Shared Schedule Model
+// Global Schedule Model
 class ScheduleModel {
   String id;
   String entrepreneurName;
   String address;
+  String phone;
   String customerName;
-  String weight;
   String bill;
   String pickupTime;
   String deliveryTime;
@@ -43,8 +40,8 @@ class ScheduleModel {
     required this.id,
     required this.entrepreneurName,
     required this.address,
+    required this.phone,
     required this.customerName,
-    required this.weight,
     required this.bill,
     required this.pickupTime,
     required this.deliveryTime,
@@ -52,56 +49,163 @@ class ScheduleModel {
     this.assignedRider = 'Unassigned',
     this.status = 'Active',
   });
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'entrepreneurName': entrepreneurName,
-        'address': address,
-        'customerName': customerName,
-        'weight': weight,
-        'bill': bill,
-        'pickupTime': pickupTime,
-        'deliveryTime': deliveryTime,
-        'note': note,
-        'assignedRider': assignedRider,
-        'status': status,
-      };
-
-  factory ScheduleModel.fromJson(Map<String, dynamic> json) => ScheduleModel(
-        id: json['id'],
-        entrepreneurName: json['entrepreneurName'],
-        address: json['address'],
-        customerName: json['customerName'],
-        weight: json['weight'],
-        bill: json['bill'],
-        pickupTime: json['pickupTime'],
-        deliveryTime: json['deliveryTime'],
-        note: json['note'] ?? '',
-        assignedRider: json['assignedRider'] ?? 'Unassigned',
-        status: json['status'] ?? 'Active',
-      );
-}
-
-// Persistence Handler to Save Data
-class StorageService {
-  static const String _key = 'aparajita_schedules_data';
-
-  static Future<List<ScheduleModel>> loadSchedules() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? dataString = prefs.getString(_key);
-    if (dataString == null) return [];
-    List<dynamic> jsonList = jsonDecode(dataString);
-    return jsonList.map((e) => ScheduleModel.fromJson(e)).toList();
-  }
-
-  static Future<void> saveSchedules(List<ScheduleModel> list) async {
-    final prefs = await SharedPreferences.getInstance();
-    String dataString = jsonEncode(list.map((e) => e.toJson()).toList());
-    await prefs.setString(_key, dataString);
-  }
 }
 
 List<ScheduleModel> globalSchedules = [];
+
+// Custom Branding Background & Logo Widget
+Widget buildBrandingHeader() {
+  return Column(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withOpacity(0.15),
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: const Icon(
+          Icons.woman_rounded, // Visual representation of Aparajita Icon
+          size: 65,
+          color: Colors.white,
+        ),
+      ),
+      const SizedBox(height: 10),
+      const Text(
+        'আমরা অপরাজিতা',
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          letterSpacing: 1.2,
+        ),
+      ),
+    ],
+  );
+}
+
+BoxDecoration brandingBackground() {
+  return const BoxDecoration(
+    gradient: LinearGradient(
+      colors: [Color(0xFF3B0020), Color(0xFF6B003B), Color(0xFF8B004B)],
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    ),
+  );
+}
+
+// ---------------- SIGN UP SCREEN ----------------
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
+
+  @override
+  State<SignUpScreen> createState() => _SignUpScreenState();
+}
+
+class _SignUpScreenState extends State<SignUpScreen> {
+  String selectedRole = 'উদ্যোক্তা';
+  final _phoneController = TextEditingController();
+  final _passController = TextEditingController();
+  final _nameController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: brandingBackground(),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              elevation: 10,
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    buildBrandingHeader(),
+                    const SizedBox(height: 20),
+                    const Text('অ্যাকাউন্ট সাইন আপ করুন',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6B003B))),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      decoration: InputDecoration(
+                        labelText: 'রোল সিলেক্ট করুন',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: ['উদ্যোক্তা', 'রাইডার']
+                          .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                          .toList(),
+                      onChanged: (v) => setState(() => selectedRole = v!),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: 'নাম (Name)',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'মোবাইল নম্বর',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _passController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'পাসওয়ার্ড',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6B003B),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('সাইন আপ সফল হয়েছে! এখন লগইন করুন।')),
+                          );
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          );
+                        },
+                        child: const Text('সাইন আপ করুন', style: TextStyle(fontSize: 16, color: Colors.white)),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        );
+                      },
+                      child: const Text('ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন'),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // ---------------- LOGIN SCREEN ----------------
 class LoginScreen extends StatefulWidget {
@@ -115,114 +219,58 @@ class _LoginScreenState extends State<LoginScreen> {
   String selectedRole = 'উদ্যোক্তা';
 
   @override
-  void initState() {
-    super.initState();
-    _initData();
-  }
-
-  Future<void> _initData() async {
-    globalSchedules = await StorageService.loadSchedules();
-    setState(() {});
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.deepPurple.shade900, Colors.deepPurple.shade400],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        decoration: brandingBackground(),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              elevation: 10,
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        color: Colors.deepPurple,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.local_shipping_rounded,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'অপরাজিতা ডেলিভারি',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    buildBrandingHeader(),
+                    const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: InputDecoration(
-                        labelText: 'লগইন টাইপ সিলেক্ট করুন',
-                        prefixIcon: const Icon(Icons.person_pin),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        labelText: 'লগইন রোল',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       items: ['উদ্যোক্তা', 'রাইডার']
-                          .map((role) => DropdownMenuItem(
-                                value: role,
-                                child: Text(role),
-                              ))
+                          .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                           .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedRole = value!;
-                        });
-                      },
+                      onChanged: (v) => setState(() => selectedRole = v!),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     TextField(
+                      keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
-                        labelText: 'ফোন / ইমেইল',
-                        prefixIcon: const Icon(Icons.phone),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        labelText: 'মোবাইল নম্বর',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     TextField(
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: 'পাসওয়ার্ড',
-                        prefixIcon: const Icon(Icons.lock),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: 48,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          backgroundColor: const Color(0xFF6B003B),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () {
                           Navigator.pushReplacement(
@@ -232,10 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
-                        child: const Text(
-                          'লগইন করুন',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                        child: const Text('লগইন করুন', style: TextStyle(fontSize: 16, color: Colors.white)),
                       ),
                     ),
                   ],
@@ -250,40 +295,16 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 // ---------------- DASHBOARD SCREEN ----------------
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   final String userRole;
   const DashboardScreen({super.key, required this.userRole});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  DateTime selectedDate = DateTime.now();
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    String formattedDate =
-        "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('ড্যাশবোর্ড (${widget.userRole})'),
-        backgroundColor: Colors.deepPurple,
+        title: Text('আমরা অপরাজিতা ($userRole)'),
+        backgroundColor: const Color(0xFF6B003B),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -299,70 +320,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
           children: [
-            Card(
-              color: Colors.deepPurple.shade50,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                leading: const Icon(Icons.calendar_month, color: Colors.deepPurple),
-                title: const Text('ডেলিভারি তারিখ', style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(formattedDate, style: const TextStyle(fontSize: 16, color: Colors.deepPurple)),
-                trailing: ElevatedButton(
-                  onPressed: () => _selectDate(context),
-                  child: const Text('তারিখ পরিবর্তন'),
-                ),
+            if (userRole == 'উদ্যোক্তা')
+              _buildFolderCard(
+                context,
+                title: 'শিডিউল সাবমিট করুন',
+                icon: Icons.note_add_rounded,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ScheduleSubmitScreen()),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                children: [
-                  if (widget.userRole == 'উদ্যোক্তা')
-                    _buildCard(
-                      title: 'শিডিউল সাবমিট করুন',
-                      icon: Icons.add_task,
-                      color: Colors.deepPurple,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ScheduleSubmitScreen(),
-                          ),
-                        ).then((_) => setState(() {}));
-                      },
-                    ),
-                  _buildCard(
-                    title: 'সকল শিডিউল (${globalSchedules.length})',
-                    icon: Icons.list_alt,
-                    color: Colors.indigo,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AllSchedulesScreen(userRole: widget.userRole),
-                        ),
-                      ).then((_) => setState(() {}));
-                    },
-                  ),
-                  _buildCard(
-                    title: 'রাইডার তালিকা',
-                    icon: Icons.two_wheeler,
-                    color: Colors.teal,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RiderListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            _buildFolderCard(
+              context,
+              title: 'সকল শিডিউল ফোল্ডার (${globalSchedules.length})',
+              icon: Icons.folder_special_rounded,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AllSchedulesScreen(userRole: userRole)),
+                );
+              },
             ),
           ],
         ),
@@ -370,31 +354,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildCard({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildFolderCard(BuildContext context, {required String title, required IconData icon, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(15),
       child: Container(
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          border: Border.all(color: color, width: 1.5),
-          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF6B003B).withOpacity(0.08),
+          border: Border.all(color: const Color(0xFF6B003B), width: 1.5),
+          borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: color),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
-            ),
+            Icon(icon, size: 50, color: const Color(0xFF6B003B)),
+            const SizedBox(height: 10),
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6B003B))),
           ],
         ),
       ),
@@ -402,7 +377,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ---------------- SCHEDULE SUBMIT FORM ----------------
+// ---------------- SCHEDULE FORM SCREEN ----------------
 class ScheduleSubmitScreen extends StatefulWidget {
   final ScheduleModel? scheduleToEdit;
   const ScheduleSubmitScreen({super.key, this.scheduleToEdit});
@@ -414,8 +389,8 @@ class ScheduleSubmitScreen extends StatefulWidget {
 class _ScheduleSubmitScreenState extends State<ScheduleSubmitScreen> {
   final _nameController = TextEditingController(text: 'Nishat');
   final _addressController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _customerController = TextEditingController();
-  final _weightController = TextEditingController(text: '1 pound');
   final _billController = TextEditingController();
   final _pickupController = TextEditingController();
   final _deliveryController = TextEditingController();
@@ -427,8 +402,8 @@ class _ScheduleSubmitScreenState extends State<ScheduleSubmitScreen> {
     if (widget.scheduleToEdit != null) {
       _nameController.text = widget.scheduleToEdit!.entrepreneurName;
       _addressController.text = widget.scheduleToEdit!.address;
+      _phoneController.text = widget.scheduleToEdit!.phone;
       _customerController.text = widget.scheduleToEdit!.customerName;
-      _weightController.text = widget.scheduleToEdit!.weight;
       _billController.text = widget.scheduleToEdit!.bill;
       _pickupController.text = widget.scheduleToEdit!.pickupTime;
       _deliveryController.text = widget.scheduleToEdit!.deliveryTime;
@@ -436,63 +411,62 @@ class _ScheduleSubmitScreenState extends State<ScheduleSubmitScreen> {
     }
   }
 
-  Future<void> _saveSchedule() async {
+  void _saveSchedule() {
     if (widget.scheduleToEdit != null) {
       widget.scheduleToEdit!.entrepreneurName = _nameController.text;
       widget.scheduleToEdit!.address = _addressController.text;
+      widget.scheduleToEdit!.phone = _phoneController.text;
       widget.scheduleToEdit!.customerName = _customerController.text;
-      widget.scheduleToEdit!.weight = _weightController.text;
       widget.scheduleToEdit!.bill = _billController.text;
       widget.scheduleToEdit!.pickupTime = _pickupController.text;
       widget.scheduleToEdit!.deliveryTime = _deliveryController.text;
       widget.scheduleToEdit!.note = _noteController.text;
     } else {
-      final newSchedule = ScheduleModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        entrepreneurName: _nameController.text,
-        address: _addressController.text,
-        customerName: _customerController.text,
-        weight: _weightController.text,
-        bill: _billController.text,
-        pickupTime: _pickupController.text,
-        deliveryTime: _deliveryController.text,
-        note: _noteController.text,
+      globalSchedules.add(
+        ScheduleModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          entrepreneurName: _nameController.text,
+          address: _addressController.text,
+          phone: _phoneController.text,
+          customerName: _customerController.text,
+          bill: _billController.text,
+          pickupTime: _pickupController.text,
+          deliveryTime: _deliveryController.text,
+          note: _noteController.text,
+        ),
       );
-      globalSchedules.add(newSchedule);
     }
-
-    await StorageService.saveSchedules(globalSchedules);
-    if (mounted) Navigator.pop(context);
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.scheduleToEdit != null ? 'শিডিউল এডিট করুন' : 'শিডিউল সাবমিট করুন'),
-        backgroundColor: Colors.deepPurple,
+        title: Text(widget.scheduleToEdit != null ? 'শিডিউল এডিট' : 'নতুন শিডিউল'),
+        backgroundColor: const Color(0xFF6B003B),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _buildTextField('উদ্যোক্তার নাম (Name)', _nameController),
-            _buildTextField('ঠিকানা (Address)', _addressController),
-            _buildTextField('কাস্টমার (Customer)', _customerController),
-            _buildTextField('ওজন (Weight)', _weightController),
-            _buildTextField('বিল (Bill)', _billController),
-            _buildTextField('পিকআপ সময় (Pickup Time)', _pickupController),
-            _buildTextField('ডেলিভারি সময় (Delivery Time)', _deliveryController),
-            _buildTextField('নোট (Note / Special Instructions)', _noteController, maxLines: 3),
+            _buildField('উদ্যোক্তা নাম', _nameController),
+            _buildField('ঠিকানা', _addressController),
+            _buildField('ফোন নং', _phoneController, isPhone: true),
+            _buildField('কাস্টমার', _customerController),
+            _buildField('Bill', _billController),
+            _buildField('Pickup time', _pickupController),
+            _buildField('Delivery time', _deliveryController),
+            _buildField('Note', _noteController, maxLines: 3),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 48,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6B003B)),
                 onPressed: _saveSchedule,
-                child: const Text('সাবমিট করুন', style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: const Text('সাবমিট করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             )
           ],
@@ -501,12 +475,13 @@ class _ScheduleSubmitScreenState extends State<ScheduleSubmitScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
+  Widget _buildField(String label, TextEditingController controller, {int maxLines = 1, bool isPhone = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -526,100 +501,52 @@ class AllSchedulesScreen extends StatefulWidget {
 }
 
 class _AllSchedulesScreenState extends State<AllSchedulesScreen> {
-  final List<String> ridersList = ['রিয়া (Riya)', 'আরিফ (Arif)', 'সাকিব (Sakib)'];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('সকল শিডিউল গ্রুপ'),
-        backgroundColor: Colors.indigo,
+        title: const Text('শিডিউল ফোল্ডার'),
+        backgroundColor: const Color(0xFF6B003B),
         foregroundColor: Colors.white,
       ),
       body: globalSchedules.isEmpty
-          ? const Center(child: Text('কোনো শিডিউল সাবমিট করা হয়নি।'))
+          ? const Center(child: Text('কোনো শিডিউল পাওয়া যায়নি।'))
           : ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: globalSchedules.length,
               itemBuilder: (context, index) {
                 final item = globalSchedules[index];
                 return Card(
-                  elevation: 3,
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   child: Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'শিডিউল #${index + 1}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.deepPurple),
-                            ),
-                            Chip(
-                              label: Text(item.status),
-                              backgroundColor: item.status == 'Active' ? Colors.green.shade100 : Colors.red.shade100,
-                            )
-                          ],
-                        ),
-                        const Divider(),
                         Text('উদ্যোক্তা নাম - ${item.entrepreneurName}'),
                         Text('ঠিকানা - ${item.address}'),
+                        Text('ফোন নং - ${item.phone}'),
+                        const SizedBox(height: 6),
                         Text('কাস্টমার: ${item.customerName}'),
-                        Text('ওজন: ${item.weight}'),
                         Text('Bill: ${item.bill}'),
                         Text('Pickup time: ${item.pickupTime}'),
                         Text('Delivery time: ${item.deliveryTime}'),
-                        if (item.note.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text('নোট: ${item.note}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-                          ),
-                        const SizedBox(height: 8),
-                        Text('অ্যাসাইন্ড রাইডার: ${item.assignedRider}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+                        Text('Note: ${item.note}'),
                         const Divider(),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            if (widget.userRole == 'উদ্যোক্তা' && item.status == 'Active') ...[
+                            Text('রাইডার: ${item.assignedRider}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            if (widget.userRole == 'উদ্যোক্তা')
                               IconButton(
                                 icon: const Icon(Icons.edit, color: Colors.blue),
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ScheduleSubmitScreen(scheduleToEdit: item),
-                                    ),
+                                    MaterialPageRoute(builder: (context) => ScheduleSubmitScreen(scheduleToEdit: item)),
                                   ).then((_) => setState(() {}));
                                 },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.cancel, color: Colors.red),
-                                onPressed: () async {
-                                  setState(() {
-                                    item.status = 'Cancelled';
-                                  });
-                                  await StorageService.saveSchedules(globalSchedules);
-                                },
-                              ),
-                            ],
-                            if (widget.userRole == 'রাইডার' && item.status == 'Active') ...[
-                              DropdownButton<String>(
-                                hint: const Text('রাইডার অ্যাসাইন করুন'),
-                                items: ridersList.map((rider) {
-                                  return DropdownMenuItem(value: rider, child: Text(rider));
-                                }).toList(),
-                                onChanged: (selectedRider) async {
-                                  setState(() {
-                                    item.assignedRider = selectedRider!;
-                                  });
-                                  await StorageService.saveSchedules(globalSchedules);
-                                },
                               )
-                            ]
                           ],
                         )
                       ],
@@ -628,42 +555,6 @@ class _AllSchedulesScreenState extends State<AllSchedulesScreen> {
                 );
               },
             ),
-    );
-  }
-}
-
-// ---------------- RIDER LIST SCREEN ----------------
-class RiderListScreen extends StatelessWidget {
-  const RiderListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> riders = [
-      {'name': 'রিয়া (Riya)', 'schedules': globalSchedules.where((e) => e.assignedRider.contains('রিয়া')).length},
-      {'name': 'আরিফ (Arif)', 'schedules': globalSchedules.where((e) => e.assignedRider.contains('আরিফ')).length},
-      {'name': 'সাকিব (Sakib)', 'schedules': globalSchedules.where((e) => e.assignedRider.contains('সাকিব')).length},
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('রাইডার তালিকা'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView.builder(
-        itemCount: riders.length,
-        padding: const EdgeInsets.all(12),
-        itemBuilder: (context, index) {
-          final rider = riders[index];
-          return Card(
-            child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(rider['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('মোট অ্যাসাইন্ড শিডিউল: ${rider['schedules']} টি'),
-            ),
-          );
-        },
-      ),
     );
   }
 }
