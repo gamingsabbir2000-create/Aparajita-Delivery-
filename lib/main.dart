@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Firebase initialization placeholder
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint("Firebase not configured via options yet: $e");
+  }
   runApp(const AparajitaApp());
 }
 
@@ -23,41 +31,6 @@ class AparajitaApp extends StatelessWidget {
     );
   }
 }
-
-// Global Schedule Model
-class ScheduleModel {
-  String id;
-  String type;
-  String entrepreneurName;
-  String entrepreneurAddress;
-  String entrepreneurPhone;
-  String customerName;
-  String customerPhone;
-  String customerAddress;
-  String bill;
-  String pickupTime;
-  String deliveryTime;
-  String deliveryDate;
-  String note;
-
-  ScheduleModel({
-    required this.id,
-    this.type = 'সাধারণ শিডিউল',
-    required this.entrepreneurName,
-    required this.entrepreneurAddress,
-    required this.entrepreneurPhone,
-    required this.customerName,
-    required this.customerPhone,
-    required this.customerAddress,
-    required this.bill,
-    required this.pickupTime,
-    required this.deliveryTime,
-    required this.deliveryDate,
-    this.note = '',
-  });
-}
-
-List<ScheduleModel> globalSchedules = [];
 
 // Watermark Wrapper Component
 Widget buildWatermarkWrapper({required Widget child}) {
@@ -119,11 +92,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    // Save info locally
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_phone', phone);
     await prefs.setString('saved_pass', pass);
     await prefs.setString('saved_name', name);
+
+    // Save user to cloud firestore if connected
+    try {
+      FirebaseFirestore.instance.collection('users').doc(phone).set({
+        'name': name,
+        'phone': phone,
+        'role': 'entrepreneur',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
 
     _showMsg('সাইন আপ সফল হয়েছে!');
 
@@ -343,21 +325,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('মোট শিডিউল:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
-                    Text('${globalSchedules.length}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
-                  ],
-                ),
+              // Realtime counter from Cloud Firestore
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
+                builder: (context, snapshot) {
+                  int totalCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('মোট শিডিউল:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                        Text('$totalCount', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -398,30 +387,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const AddScheduleScreen()),
-                    ).then((_) => setState(() {}));
+                    );
                   },
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('জমা দেওয়া শিডিউলসমূহ:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A002A))),
+              const Text('জমা দেওয়া শিডিউলসমূহ (লাইভ):', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A002A))),
               const SizedBox(height: 10),
+              
+              // Realtime schedule list from Cloud Database
               Expanded(
-                child: globalSchedules.isEmpty
-                    ? const Center(child: Text('কোনো শিডিউল জমা দেওয়া হয়নি।', style: TextStyle(color: Colors.grey)))
-                    : ListView.builder(
-                        itemCount: globalSchedules.length,
-                        itemBuilder: (context, index) {
-                          final item = globalSchedules[index];
-                          return Card(
-                            color: Colors.white.withOpacity(0.9),
-                            margin: const EdgeInsets.only(bottom: 10),
-                            child: ListTile(
-                              title: Text('${item.customerName} (${item.bill})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('উদ্যোক্তা: ${item.entrepreneurName}\nপিকআপ: ${item.pickupTime} | ডেলিভারি: ${item.deliveryTime}'),
-                            ),
-                          );
-                        },
-                      ),
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: Color(0xFF800040)));
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(child: Text('কোনো শিডিউল জমা দেওয়া হয়নি।', style: TextStyle(color: Colors.grey)));
+                    }
+                    final docs = snapshot.data!.docs;
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        return Card(
+                          color: Colors.white.withOpacity(0.9),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: ListTile(
+                            title: Text('${data['customerName'] ?? ''} (${data['bill'] ?? ''})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('উদ্যোক্তা: ${data['entrepreneurName'] ?? ''}\nপিকআপ: ${data['pickupTime'] ?? ''} | ডেলিভারি: ${data['deliveryTime'] ?? ''}'),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
               )
             ],
           ),
@@ -456,27 +457,32 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
   final _dateController = TextEditingController(text: '30 August, 2026');
   final _noteController = TextEditingController();
 
-  void _saveSchedule() {
-    globalSchedules.add(
-      ScheduleModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        type: scheduleType,
-        entrepreneurName: _entNameController.text,
-        entrepreneurAddress: _entAddressController.text,
-        entrepreneurPhone: _entPhoneController.text,
-        customerName: _custNameController.text,
-        customerPhone: _custPhoneController.text,
-        customerAddress: _custAddressController.text,
-        bill: _billController.text,
-        pickupTime: _pickupController.text,
-        deliveryTime: _deliveryController.text,
-        deliveryDate: _dateController.text,
-        note: _noteController.text,
-      ),
-    );
-    Navigator.pop(context);
+  Future<void> _saveSchedule() async {
+    try {
+      await FirebaseFirestore.instance.collection('schedules').add({
+        'type': scheduleType,
+        'entrepreneurName': _entNameController.text,
+        'entrepreneurAddress': _entAddressController.text,
+        'entrepreneurPhone': _entPhoneController.text,
+        'customerName': _custNameController.text,
+        'customerPhone': _custPhoneController.text,
+        'customerAddress': _custAddressController.text,
+        'bill': _billController.text,
+        'pickupTime': _pickupController.text,
+        'deliveryTime': _deliveryController.text,
+        'deliveryDate': _dateController.text,
+        'note': _noteController.text,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('শিডিউল সফলভাবে ক্লাউডে সেভ হয়েছে!')));
+    } catch (e) {
+      debugPrint("Database Save Error: $e");
+    }
+    if (mounted) Navigator.pop(context);
   }
 
+  @style
   @override
   Widget build(BuildContext context) {
     return Scaffold(
