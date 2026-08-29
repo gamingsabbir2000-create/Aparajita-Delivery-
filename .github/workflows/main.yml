@@ -25,7 +25,7 @@ jobs:
           channel: 'stable'
 
       - name: Generate platform scaffolding
-        run: flutter create . --platforms=android
+        run: flutter create . --project-name=aparajita_delivery --platforms=android
 
       - name: Install dependencies
         run: flutter pub get
