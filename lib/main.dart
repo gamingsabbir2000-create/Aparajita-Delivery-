@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Firebase initialization placeholder
   try {
     await Firebase.initializeApp();
   } catch (e) {
@@ -97,7 +96,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     await prefs.setString('saved_pass', pass);
     await prefs.setString('saved_name', name);
 
-    // Save user to cloud firestore if connected
     try {
       FirebaseFirestore.instance.collection('users').doc(phone).set({
         'name': name,
@@ -325,7 +323,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Realtime counter from Cloud Firestore
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
                 builder: (context, snapshot) {
@@ -394,8 +391,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
               const Text('জমা দেওয়া শিডিউলসমূহ (লাইভ):', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A002A))),
               const SizedBox(height: 10),
-              
-              // Realtime schedule list from Cloud Database
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
@@ -482,7 +477,6 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
     if (mounted) Navigator.pop(context);
   }
 
-  @style
   @override
   Widget build(BuildContext context) {
     return Scaffold(
