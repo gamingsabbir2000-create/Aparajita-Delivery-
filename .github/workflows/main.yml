@@ -16,6 +16,9 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
           
+      # অটো প্রজেক্ট স্ট্রাকচার ফিক্স করার জন্য এই কমান্ডটি দেওয়া হলো
+      - run: flutter create . --org com.aparajita.delivery --project-name aparajita_delivery --platforms=android
+      
       - run: flutter pub get
       - run: flutter build apk --release
 
