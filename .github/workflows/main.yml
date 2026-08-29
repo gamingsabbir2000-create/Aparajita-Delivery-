@@ -25,7 +25,9 @@ jobs:
           channel: 'stable'
 
       - name: Generate platform scaffolding
-        run: flutter create . --project-name=aparajita_delivery --platforms=android
+        run: |
+          flutter create . --project-name=aparajita_delivery --platforms=android
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/' android/app/build.gradle
 
       - name: Install dependencies
         run: flutter pub get
