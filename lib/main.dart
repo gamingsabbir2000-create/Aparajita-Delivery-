@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +30,23 @@ class AparajitaApp extends StatelessWidget {
       home: const LoginScreen(),
     );
   }
+}
+
+// ---------------- HELPER FUNCTIONS ----------------
+String formatDateString(DateTime dt) {
+  List<String> months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  String day = dt.day.toString().padLeft(2, '0');
+  String month = months[dt.month - 1];
+  return "$day $month, ${dt.year}";
+}
+
+String formatDateKey(DateTime dt) {
+  String month = dt.month.toString().padLeft(2, '0');
+  String day = dt.day.toString().padLeft(2, '0');
+  return "${dt.year}-$month-$day";
 }
 
 // ---------------- WATERMARK WRAPPER ----------------
@@ -350,8 +366,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  String get _formattedDate => DateFormat('dd MMMM, yyyy').format(_selectedDate);
-  String get _dateKey => DateFormat('yyyy-MM-dd').format(_selectedDate);
+  String get _formattedDate => formatDateString(_selectedDate);
+  String get _dateKey => formatDateKey(_selectedDate);
 
   void _pickDate() async {
     DateTime? picked = await showDatePicker(
@@ -533,11 +549,9 @@ class ScheduleCard extends StatelessWidget {
 
   void _togglePayment() {
     bool current = data['isPaid'] ?? false;
-    bool wasChanged = data['isPaymentChanged'] ?? false;
-
     FirebaseFirestore.instance.collection('schedules').doc(docId).update({
       'isPaid': !current,
-      'isPaymentChanged': true, // Payment status updated flag
+      'isPaymentChanged': true,
     });
   }
 
@@ -709,12 +723,12 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
       _dateController.text = d['deliveryDate'] ?? '';
       _noteController.text = d['note'] ?? '';
     } else {
-      _dateController.text = DateFormat('dd MMMM, yyyy').format(DateTime.now());
+      _dateController.text = formatDateString(DateTime.now());
     }
   }
 
   Future<void> _saveSchedule() async {
-    String dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    String dateKey = formatDateKey(DateTime.now());
 
     Map<String, dynamic> payload = {
       'type': scheduleType,
