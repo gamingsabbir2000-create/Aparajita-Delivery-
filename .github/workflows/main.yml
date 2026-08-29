@@ -16,9 +16,6 @@ jobs:
         with:
           flutter-version: '3.19.x'
           channel: 'stable'
-          cache: true
-          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
-          cache-path: "\${{ runner.tool_cache }}/flutter"
           java-version: '17'
 
       - name: Install dependencies
