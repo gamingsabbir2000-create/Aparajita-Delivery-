@@ -8,7 +8,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    debugPrint("Firebase not configured via options yet: $e");
+    debugPrint("Firebase init failed: $e");
   }
   runApp(const AparajitaApp());
 }
@@ -20,13 +20,13 @@ class AparajitaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'আমরা অপরাজিতা',
+      title: 'অপরাজিতা অ্যাপস',
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFFDEEF4),
         primaryColor: const Color(0xFF800040),
         useMaterial3: true,
       ),
-      home: const SignUpScreen(),
+      home: const LoginScreen(),
     );
   }
 }
@@ -44,7 +44,7 @@ Widget buildWatermarkWrapper({required Widget child}) {
               Icon(Icons.woman_rounded, size: 180, color: Color(0xFF800040)),
               SizedBox(height: 10),
               Text(
-                'আমরা অপরাজিতা',
+                'অপরাজিতা অ্যাপস',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -58,131 +58,6 @@ Widget buildWatermarkWrapper({required Widget child}) {
       child,
     ],
   );
-}
-
-// ---------------- SIGN UP SCREEN ----------------
-class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
-
-  @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
-}
-
-class _SignUpScreenState extends State<SignUpScreen> {
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passController = TextEditingController();
-
-  Future<void> _handleSignUp() async {
-    String name = _nameController.text.trim();
-    String phone = _phoneController.text.trim();
-    String pass = _passController.text.trim();
-
-    if (name.isEmpty) {
-      _showMsg('অনুগ্রহ করে আপনার নাম লিখুন।');
-      return;
-    }
-    if (phone.length < 11) {
-      _showMsg('সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন।');
-      return;
-    }
-    if (pass.length < 6) {
-      _showMsg('পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।');
-      return;
-    }
-
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_phone', phone);
-    await prefs.setString('saved_pass', pass);
-    await prefs.setString('saved_name', name);
-
-    try {
-      FirebaseFirestore.instance.collection('users').doc(phone).set({
-        'name': name,
-        'phone': phone,
-        'role': 'entrepreneur',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {}
-
-    _showMsg('সাইন আপ সফল হয়েছে!');
-
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  }
-
-  void _showMsg(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('সাইন আপ - আমরা অপরাজিতা'),
-        backgroundColor: const Color(0xFF800040),
-        foregroundColor: Colors.white,
-      ),
-      body: buildWatermarkWrapper(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Center(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  const Icon(Icons.woman_rounded, size: 80, color: Color(0xFF800040)),
-                  const Text('আমরা অপরাজিতা', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
-                  const SizedBox(height: 20),
-                  _buildInput('নাম (Name)', _nameController),
-                  _buildInput('মোবাইল নম্বর (১১ ডিজিট)', _phoneController, isPhone: true),
-                  _buildInput('পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)', _passController, isPass: true),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF800040)),
-                      onPressed: _handleSignUp,
-                      child: const Text('সাইন আপ করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginScreen()),
-                      );
-                    },
-                    child: const Text('ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন', style: TextStyle(color: Color(0xFF800040))),
-                  )
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInput(String label, TextEditingController controller, {bool isPhone = false, bool isPass = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: TextField(
-        controller: controller,
-        obscureText: isPass,
-        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
-        decoration: InputDecoration(
-          labelText: label,
-          fillColor: Colors.white.withOpacity(0.8),
-          filled: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      ),
-    );
-  }
 }
 
 // ---------------- LOGIN SCREEN ----------------
@@ -224,9 +99,16 @@ class _LoginScreenState extends State<LoginScreen> {
     String enteredPhone = _phoneController.text.trim();
     String enteredPass = _passController.text.trim();
 
+    if (enteredPhone.isEmpty || enteredPass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ফোন নম্বর এবং পাসওয়ার্ড দিন।')),
+      );
+      return;
+    }
+
     if (savedPhone == null || savedPass == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('কোনো অ্যাকাউন্ট পাওয়া যায়নি। প্রথমে সাইন আপ করুন।')),
+        const SnackBar(content: Text('কোনো অ্যাকাউন্ট পাওয়া যায়নি। নিচে সাইন আপ করুন।')),
       );
       return;
     }
@@ -247,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('লগইন - আমরা অপরাজিতা'),
+        title: const Text('লগইন - অপরাজিতা অ্যাপস'),
         backgroundColor: const Color(0xFF800040),
         foregroundColor: Colors.white,
       ),
@@ -259,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 children: [
                   const Icon(Icons.woman_rounded, size: 80, color: Color(0xFF800040)),
-                  const Text('আমরা অপরাজিতা', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                  const Text('অপরাজিতা অ্যাপস', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
                   const SizedBox(height: 20),
                   _buildInput('মোবাইল নম্বর', _phoneController, isPhone: true),
                   _buildInput('পাসওয়ার্ড', _passController, isPass: true),
@@ -273,6 +155,148 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('লগইন করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
                     ),
                   ),
+                  const SizedBox(height: 15),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                      );
+                    },
+                    child: const Text(
+                      'নতুন অ্যাকাউন্ট তৈরি করবেন? সাইন আপ করুন',
+                      style: TextStyle(color: Color(0xFF800040), fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInput(String label, TextEditingController controller, {bool isPhone = false, bool isPass = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        obscureText: isPass,
+        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          fillColor: Colors.white.withOpacity(0.8),
+          filled: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------- SIGN UP SCREEN ----------------
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
+
+  @override
+  State<SignUpScreen> createState() => _SignUpScreenState();
+}
+
+class _SignUpScreenState extends State<SignUpScreen> {
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passController = TextEditingController();
+
+  Future<void> _handleSignUp() async {
+    String name = _nameController.text.trim();
+    String phone = _phoneController.text.trim();
+    String pass = _passController.text.trim();
+
+    if (name.isEmpty) {
+      _showMsg('অনুগ্রহ করে আপনার নাম লিখুন।');
+      return;
+    }
+    if (phone.length < 11) {
+      _showMsg('সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন।');
+      return;
+    }
+    if (pass.length < 6) {
+      _showMsg('পাসওয়ার্ড অন্তত ৬ অক্ষরের হতে হবে।');
+      return;
+    }
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_phone', phone);
+    await prefs.setString('saved_pass', pass);
+    await prefs.setString('saved_name', name);
+
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        FirebaseFirestore.instance.collection('users').doc(phone).set({
+          'name': name,
+          'phone': phone,
+          'role': 'entrepreneur',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (_) {}
+
+    _showMsg('সাইন আপ সফল হয়েছে! এখন লগইন করুন।');
+
+    if (!mounted) return;
+    Navigator.pop(context); // ব্যাক করে লগইন পেজে নিয়ে যাবে
+  }
+
+  void _showMsg(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('সাইন আপ - অপরাজিতা অ্যাপস'),
+        backgroundColor: const Color(0xFF800040),
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: buildWatermarkWrapper(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const Icon(Icons.woman_rounded, size: 80, color: Color(0xFF800040)),
+                  const Text('অপরাজিতা অ্যাপস', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                  const SizedBox(height: 20),
+                  _buildInput('নাম (Name)', _nameController),
+                  _buildInput('মোবাইল নম্বর (১১ ডিজিট)', _phoneController, isPhone: true),
+                  _buildInput('পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)', _passController, isPass: true),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF800040)),
+                      onPressed: _handleSignUp,
+                      child: const Text('সাইন আপ করুন', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // ব্যাক করে আগের পেজে নেওয়া
+                    },
+                    child: const Text(
+                      'ইতিমধ্যে অ্যাকাউন্ট আছে? লগইন করুন',
+                      style: TextStyle(color: Color(0xFF800040), fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  )
                 ],
               ),
             ),
@@ -311,11 +335,24 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
+    bool isFirebaseReady = Firebase.apps.isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ড্যাশবোর্ড - আমরা অপরাজিতা'),
+        title: const Text('ড্যাশবোর্ড - অপরাজিতা অ্যাপস'),
         backgroundColor: const Color(0xFF800040),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+              );
+            },
+          )
+        ],
       ),
       body: buildWatermarkWrapper(
         child: Padding(
@@ -323,28 +360,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
-                builder: (context, snapshot) {
-                  int totalCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('মোট শিডিউল:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
-                        Text('$totalCount', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
-                      ],
-                    ),
-                  );
-                },
-              ),
+              if (isFirebaseReady)
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
+                  builder: (context, snapshot) {
+                    int totalCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('মোট শিডিউল:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                          Text('$totalCount', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                        ],
+                      ),
+                    );
+                  },
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('মোট শিডিউল:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                      Text('0', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF800040))),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -389,35 +444,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('জমা দেওয়া শিডিউলসমূহ (লাইভ):', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A002A))),
+              const Text('জমা দেওয়া শিডিউলসমূহ:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4A002A))),
               const SizedBox(height: 10),
               Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: Color(0xFF800040)));
-                    }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return const Center(child: Text('কোনো শিডিউল জমা দেওয়া হয়নি।', style: TextStyle(color: Colors.grey)));
-                    }
-                    final docs = snapshot.data!.docs;
-                    return ListView.builder(
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        return Card(
-                          color: Colors.white.withOpacity(0.9),
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: ListTile(
-                            title: Text('${data['customerName'] ?? ''} (${data['bill'] ?? ''})', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('উদ্যোক্তা: ${data['entrepreneurName'] ?? ''}\nপিকআপ: ${data['pickupTime'] ?? ''} | ডেলিভারি: ${data['deliveryTime'] ?? ''}'),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                child: isFirebaseReady
+                    ? StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance.collection('schedules').snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator(color: Color(0xFF800040)));
+                          }
+                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                            return const Center(child: Text('কোনো শিডিউল জমা দেওয়া হয়নি।', style: TextStyle(color: Colors.grey)));
+                          }
+                          final docs = snapshot.data!.docs;
+                          return ListView.builder(
+                            itemCount: docs.length,
+                            itemBuilder: (context, index) {
+                              final data = docs[index].data() as Map<String, dynamic>;
+                              return Card(
+                                color: Colors.white.withOpacity(0.9),
+                                margin: const EdgeInsets.only(bottom: 10),
+                                child: ListTile(
+                                  title: Text('${data['customerName'] ?? ''} (${data['bill'] ?? ''})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  subtitle: Text('উদ্যোক্তা: ${data['entrepreneurName'] ?? ''}\nপিকআপ: ${data['pickupTime'] ?? ''} | ডেলিভারি: ${data['deliveryTime'] ?? ''}'),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      )
+                    : const Center(child: Text('কোনো শিডিউল জমা দেওয়া হয়নি।', style: TextStyle(color: Colors.grey))),
               )
             ],
           ),
@@ -454,23 +511,25 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
 
   Future<void> _saveSchedule() async {
     try {
-      await FirebaseFirestore.instance.collection('schedules').add({
-        'type': scheduleType,
-        'entrepreneurName': _entNameController.text,
-        'entrepreneurAddress': _entAddressController.text,
-        'entrepreneurPhone': _entPhoneController.text,
-        'customerName': _custNameController.text,
-        'customerPhone': _custPhoneController.text,
-        'customerAddress': _custAddressController.text,
-        'bill': _billController.text,
-        'pickupTime': _pickupController.text,
-        'deliveryTime': _deliveryController.text,
-        'deliveryDate': _dateController.text,
-        'note': _noteController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+      if (Firebase.apps.isNotEmpty) {
+        await FirebaseFirestore.instance.collection('schedules').add({
+          'type': scheduleType,
+          'entrepreneurName': _entNameController.text,
+          'entrepreneurAddress': _entAddressController.text,
+          'entrepreneurPhone': _entPhoneController.text,
+          'customerName': _custNameController.text,
+          'customerPhone': _custPhoneController.text,
+          'customerAddress': _custAddressController.text,
+          'bill': _billController.text,
+          'pickupTime': _pickupController.text,
+          'deliveryTime': _deliveryController.text,
+          'deliveryDate': _dateController.text,
+          'note': _noteController.text,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('শিডিউল সফলভাবে ক্লাউডে সেভ হয়েছে!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('শিডিউল সফলভাবে সেভ হয়েছে!')));
     } catch (e) {
       debugPrint("Database Save Error: $e");
     }
@@ -484,6 +543,10 @@ class _AddScheduleScreenState extends State<AddScheduleScreen> {
         title: const Text('নতুন শিডিউল তৈরি করুন'),
         backgroundColor: const Color(0xFF800040),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: buildWatermarkWrapper(
         child: SingleChildScrollView(
