@@ -44,7 +44,6 @@ class HomeScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Firebase Auth টেস্ট করার জন্য অ্যানোনিমাস সাইন-ইন বা বেসিক কল রাখতে পারেন
                   UserCredential userCredential = await FirebaseAuth.instance.signInAnonymously();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Signed in: ${userCredential.user?.uid}')),
