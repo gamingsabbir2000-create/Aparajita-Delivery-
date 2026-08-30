@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'admin_login_page.dart'; // নতুন ফাইলটি এখানে ইমপোর্ট করা হলো
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,15 +9,57 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Aparajita Delivery Admin',
-      theme: ThemeData(primarySwatch: Colors.red),
-      home: const AdminLoginPage(), // অ্যাপ চালু হলে সরাসরি অ্যাডমিন লগইন পেজ আসবে
+      title: 'Aparajita Delivery',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Aparajita Delivery'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Welcome to Aparajita Delivery!',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  // Firebase Auth টেস্ট করার জন্য অ্যানোনিমাস সাইন-ইন বা বেসিক কল রাখতে পারেন
+                  UserCredential userCredential = await FirebaseAuth.instance.signInAnonymously();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Signed in: ${userCredential.user?.uid}')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              child: const Text('Test Firebase Auth'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
