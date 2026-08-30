@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'admin_dashboard_page.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({Key? key}) : super(key: key);
@@ -21,10 +22,16 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // লগইন সফল হলে পরবর্তী পেজে নিয়ে যাওয়ার কোড এখানে হবে
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('লগইন সফল হয়েছে!')),
       );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
+      );
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ত্রুটি: ${e.toString()}')),
