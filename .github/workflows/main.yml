@@ -1,9 +1,8 @@
-
 name: Build Flutter APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -16,14 +15,14 @@ jobs:
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x'
-          channel: 'stable'
+          flutter-version: "3.19.x"
+          channel: "stable"
           cache: true
 
       - name: Install dependencies
@@ -31,11 +30,11 @@ jobs:
 
       - name: Fix minSdkVersion for Firebase
         run: |
-          flutter create . --org com.apajita.delivery --project-name aparajita_delivery --platforms=android
-          
           GRADLE_FILE="android/app/build.gradle"
+
           if [ -f "$GRADLE_FILE" ]; then
-            sed -i 's/minSdkVersion.*/minSdkVersion 23/g' $GRADLE_FILE
+            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' "$GRADLE_FILE"
+            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' "$GRADLE_FILE"
           fi
 
       - name: Build APK
